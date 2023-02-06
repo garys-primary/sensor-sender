@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <p>
+    This is simple WebSocket client
+  </p>
+  <button onclick="sendTestMessage()"> Send test message </button>
+
+<script>
+  var socket
+  var outbox = []
+
+  var serverURL = 'ws://127.0.0.1:9980'
+  var clientID = new Date().toISOString()
+
+  initWebSocket();
+
+  function initWebSocket(){
+    if(socket){
+      console.log("killing existing socket")
+      socket.close()
+    }
+    socket = new WebSocket(serverURL);
+
+    // receive message
+    // socket.addEventListener('message', (event) => {})
+
+    socket.addEventListener('open', (event) => {
+      // dispatched all outbox messages
+      while(message = outbox.shift()){
+        socket.send(JSON.stringify(message)) 
+      }
+    })
+  }
+
+  function sendTestMessage(){
+    let message = {
+      clientID,
+      type: "TEST",
+      data: {
+        x: 10,
+        y: 20,
+        z: 30
+      }
+    }
+    sendWSMessage(message)
+    console.log("test message sent")
+  }
+
+  function sendWSMessage(message){
+    // socket is OPEN
+    if(socket.readyState == 1){
+      socket.send(JSON.stringify(message))
+    }else{
+      outbox.push(message)
+    }
+
+    //if socket is CLOSING or CLOSED, reinit socket
+    if(socket.readyState == 2 || socket.readyState == 3)
+      initWebSocket()
+  }
+
+  
+  
+</script>
+</body>
+</html>
