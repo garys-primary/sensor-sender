@@ -1,23 +1,35 @@
 <!DOCTYPE html>
 <html>
-<body>
-  <p>
-    This is simple WebSocket client
-  </p>
+<body style="font-family: monospace; max-width: 400px;">
+  <p> This is simple WebSocket client. Server IP: </p>
+  ws://<input type="text" id="ipAddress" value="192.168.1.175"/>:9980 
+  <button onClick="updateIP()">OK</button>
+  <br/>
+  <br/>
   <button onclick="sendTestMessage()"> Send test message </button>
+  <br/>
+  <br/>
+  <div id="msgWindow"></div>
 
+<script src="sense.js"></script>
 <script>
   var socket
   var outbox = []
+  var sense = sense.init();
 
-  var serverURL = 'ws://127.0.0.1:9980'
+  var serverURL = 'ws://192.168.1.175:9980' // 'ws://127.0.0.1:9980'
   var clientID = new Date().toISOString()
 
   initWebSocket();
 
+  sense.orientation(function(data){
+    log(data)
+    sendWSMessage(data)
+  })
+
   function initWebSocket(){
     if(socket){
-      console.log("killing existing socket")
+      log("killing existing socket")
       socket.close()
     }
     socket = new WebSocket(serverURL);
@@ -32,6 +44,10 @@
       }
     })
   }
+  function updateIP(){
+    serverURL = "ws://" + document.getElementById("ipAddress").value + ":9980"
+    initWebSocket()
+  }
 
   function sendTestMessage(){
     let message = {
@@ -44,7 +60,7 @@
       }
     }
     sendWSMessage(message)
-    console.log("test message sent")
+    log("test message sent")
   }
 
   function sendWSMessage(message){
@@ -60,6 +76,45 @@
       initWebSocket()
   }
 
+  function createAccelerometerEvent(){
+    if (window.DeviceOrientationEvent) {
+      log("using DeviceOrientationEvent")
+      window.addEventListener("deviceorientation", function () {
+          onTilt([event.beta, event.gamma]);
+      }, true);
+    } else if (window.DeviceMotionEvent) {
+      log("using DeviceMotionEvent")
+      window.addEventListener('devicemotion', function () {
+        onTilt([event.acceleration.x * 2, event.acceleration.y * 2]);
+      }, true);
+    } else {
+      log("using MozOrientation")
+      window.addEventListener("MozOrientation", function () {
+        onTilt([orientation.x * 50, orientation.y * 50]);
+      }, true);
+    }
+  }
+
+  function onTilt(acceleration){
+    let message = {
+      clientID,
+      type: "ORIENTATION",
+      data: {
+        x: acceleration[0],
+        y: acceleration[1]
+      }
+    }
+    sendWSMessage(message);
+    log(message)
+  }
+
+  function log(...message){
+    console.log(...message)
+    let outWindow = document.getElementById("msgWindow")
+    outWindow.innerHTML = JSON.stringify(message) + '<br/><br/>' + outWindow.innerHTML
+  }
+
+  document.getElementById("msgWindow").innerHTML += "-----"
   
   
 </script>
